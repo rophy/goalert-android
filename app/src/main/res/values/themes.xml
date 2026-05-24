@@ -3,4 +3,12 @@
     <!-- Action-bar theme so the WebView screen has an overflow menu (Settings) and the
          settings screen has an up button. -->
     <style name="Theme.GoAlert" parent="Theme.AppCompat.DayNight" />
+
+    <style name="SettingsDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginTop">24dp</item>
+        <item name="android:layout_marginBottom">24dp</item>
+        <item name="android:background">?android:attr/listDivider</item>
+    </style>
 </resources>

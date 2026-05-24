@@ -13,12 +13,26 @@
     <string name="settings_title">Settings</string>
     <string name="settings_instance_label">GoAlert instance</string>
     <string name="settings_change_instance">Change instance URL</string>
+    <string name="settings_open_settings">Open settings</string>
+    <string name="settings_status_enabled">Enabled</string>
+    <string name="settings_status_disabled">Not enabled</string>
+
+    <string name="settings_ring_title">Ring for critical alerts</string>
+    <string name="settings_ring_hint">When off, critical alerts show as a normal notification instead of ringing.</string>
+
     <string name="settings_dnd_title">Do Not Disturb override</string>
-    <string name="settings_dnd_enabled">Enabled</string>
-    <string name="settings_dnd_disabled">Not enabled</string>
-    <string name="settings_dnd_fix">Fix</string>
+    <string name="settings_dnd_hint_off">Tap Open settings, then turn on “Override Do Not Disturb” for Critical Alerts.</string>
+    <string name="settings_dnd_hint_on">Critical alerts can break through Do Not Disturb. Tap Open settings to turn this off.</string>
+
+    <string name="settings_fullscreen_title">Full-screen alerts</string>
+    <string name="settings_fullscreen_hint_off">Tap Open settings, then allow full-screen notifications so alerts ring over the lock screen.</string>
+    <string name="settings_fullscreen_hint_on">Alerts can ring over the lock screen. Tap Open settings to turn this off.</string>
+
     <string name="settings_test_critical">Send test critical alert</string>
-    <string name="settings_test_critical_sent">Test critical alert sent</string>
+
+    <!-- Ringing alert -->
+    <string name="ring_heading">Incoming alert</string>
+    <string name="ring_open">Open in GoAlert</string>
 
     <!-- DND setup banner -->
     <string name="dnd_banner_title">Override Do Not Disturb</string>

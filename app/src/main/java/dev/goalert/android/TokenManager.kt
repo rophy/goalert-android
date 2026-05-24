@@ -17,6 +17,7 @@ object TokenManager {
     private const val PREF_FCM_TOKEN = "fcm_token"
     private const val PREF_CONTACT_METHOD_ID = "contact_method_id"
     private const val PREF_DND_PROMPT_DISMISSED = "dnd_prompt_dismissed"
+    private const val PREF_RING_ENABLED = "ring_enabled"
 
     fun getInstanceUrl(context: Context): String? {
         return PreferenceManager.getDefaultSharedPreferences(context)
@@ -45,6 +46,17 @@ object TokenManager {
     fun setDndPromptDismissed(context: Context) {
         PreferenceManager.getDefaultSharedPreferences(context)
             .edit().putBoolean(PREF_DND_PROMPT_DISMISSED, true).apply()
+    }
+
+    /** Whether actionable alerts ring full-screen (default) or post a normal notification. */
+    fun isRingEnabled(context: Context): Boolean {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+            .getBoolean(PREF_RING_ENABLED, true)
+    }
+
+    fun setRingEnabled(context: Context, enabled: Boolean) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(PREF_RING_ENABLED, enabled).apply()
     }
 
     fun registerToken(context: Context, token: String) {

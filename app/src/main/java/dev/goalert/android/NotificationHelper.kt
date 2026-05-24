@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 
@@ -16,7 +18,7 @@ object NotificationHelper {
     // Removed in the two-channel model; deleted from existing installs in createChannels().
     private const val LEGACY_CHANNEL_OTHER = "alerts_other"
 
-    private const val TEST_NOTIFICATION_ID = 424242
+    const val RING_NOTIFICATION_ID = 911911
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -56,22 +58,65 @@ object NotificationHelper {
         }
     }
 
+    /** True if the app may launch full-screen intents (always true before Android 14). */
+    fun canUseFullScreenIntent(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+        } else {
+            true
+        }
+    }
+
+    /** Settings page (Android 14+) where the user grants the full-screen-intent permission. */
+    fun fullScreenIntentSettingsIntent(context: Context): Intent {
+        return Intent(
+            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+            Uri.parse("package:${context.packageName}")
+        )
+    }
+
     /**
-     * Posts a local notification on the critical channel. Lets the user verify DND override
-     * client-side: if this breaks through Do Not Disturb, the override is working. Does not
-     * exercise the FCM delivery path.
+     * Posts a high-priority full-screen-intent notification that launches [AlertRingActivity],
+     * producing a ringing, lock-screen alert for actionable alert types.
      */
-    fun showTestCriticalNotification(context: Context) {
+    fun showRingingAlert(context: Context, data: Map<String, String>) {
+        val type = data["type"] ?: return
+        val instanceUrl = data["instance_url"]?.takeIf { it.isNotEmpty() }
+            ?: TokenManager.getInstanceUrl(context)
+            ?: ""
+
+        val (title, body) = when (type) {
+            "alert" -> (data["service_name"] ?: "Alert") to (data["summary"] ?: "New alert")
+            "alert_bundle" -> (data["service_name"] ?: "Alerts") to
+                "${data["count"] ?: "Multiple"} unacknowledged alerts"
+            else -> return
+        }
+        val deepLink = if (type == "alert") "$instanceUrl/alerts/${data["alert_id"]}" else instanceUrl
+
+        val ringIntent = Intent(context, AlertRingActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(AlertRingActivity.EXTRA_TITLE, title)
+            putExtra(AlertRingActivity.EXTRA_BODY, body)
+            putExtra(AlertRingActivity.EXTRA_DEEP_LINK, deepLink)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, RING_NOTIFICATION_ID, ringIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_CRITICAL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Test Critical Alert")
-            .setContentText("If this breaks through Do Not Disturb, the override is working.")
-            .setAutoCancel(true)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true)
             .build()
+
         context.getSystemService(NotificationManager::class.java)
-            .notify(TEST_NOTIFICATION_ID, notification)
+            .notify(RING_NOTIFICATION_ID, notification)
     }
 
     fun showNotification(context: Context, data: Map<String, String>) {

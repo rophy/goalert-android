@@ -3,16 +3,17 @@ package dev.goalert.android
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var dndStatus: TextView
-    private lateinit var dndFix: Button
+    private lateinit var dndHint: TextView
+    private lateinit var fullScreenStatus: TextView
+    private lateinit var fullScreenHint: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,36 +26,68 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.instance_url).text =
             TokenManager.getInstanceUrl(this) ?: "—"
-
         findViewById<Button>(R.id.change_instance).setOnClickListener { changeInstance() }
 
+        findViewById<SwitchCompat>(R.id.ring_switch).apply {
+            isChecked = TokenManager.isRingEnabled(this@SettingsActivity)
+            setOnCheckedChangeListener { _, checked ->
+                TokenManager.setRingEnabled(this@SettingsActivity, checked)
+            }
+        }
+
         dndStatus = findViewById(R.id.dnd_status)
-        dndFix = findViewById(R.id.dnd_fix)
-        dndFix.setOnClickListener {
+        dndHint = findViewById(R.id.dnd_hint)
+        findViewById<Button>(R.id.dnd_fix).setOnClickListener {
             startActivity(NotificationHelper.criticalChannelSettingsIntent(this))
         }
 
-        findViewById<Button>(R.id.test_critical).setOnClickListener {
-            NotificationHelper.showTestCriticalNotification(this)
-            Toast.makeText(this, R.string.settings_test_critical_sent, Toast.LENGTH_SHORT).show()
+        fullScreenStatus = findViewById(R.id.fullscreen_status)
+        fullScreenHint = findViewById(R.id.fullscreen_hint)
+        findViewById<Button>(R.id.fullscreen_fix).setOnClickListener {
+            startActivity(NotificationHelper.fullScreenIntentSettingsIntent(this))
         }
+
+        findViewById<Button>(R.id.test_critical).setOnClickListener { startTestRing() }
     }
 
     override fun onResume() {
         super.onResume()
-        refreshDndStatus()
+        setStatus(
+            dndStatus, dndHint,
+            NotificationHelper.criticalDndBypassEnabled(this),
+            R.string.settings_dnd_hint_on, R.string.settings_dnd_hint_off
+        )
+        setStatus(
+            fullScreenStatus, fullScreenHint,
+            NotificationHelper.canUseFullScreenIntent(this),
+            R.string.settings_fullscreen_hint_on, R.string.settings_fullscreen_hint_off
+        )
     }
 
-    private fun refreshDndStatus() {
-        if (NotificationHelper.criticalDndBypassEnabled(this)) {
-            dndStatus.text = getString(R.string.settings_dnd_enabled)
-            dndStatus.setTextColor(Color.parseColor("#2E7D32")) // green
-            dndFix.visibility = View.GONE
+    private fun setStatus(status: TextView, hint: TextView, enabled: Boolean, hintOn: Int, hintOff: Int) {
+        if (enabled) {
+            status.setText(R.string.settings_status_enabled)
+            status.setTextColor(Color.parseColor("#2E7D32")) // green
+            hint.setText(hintOn)
         } else {
-            dndStatus.text = getString(R.string.settings_dnd_disabled)
-            dndStatus.setTextColor(Color.parseColor("#F9A825")) // amber
-            dndFix.visibility = View.VISIBLE
+            status.setText(R.string.settings_status_disabled)
+            status.setTextColor(Color.parseColor("#F9A825")) // amber
+            hint.setText(hintOff)
         }
+    }
+
+    private fun startTestRing() {
+        startActivity(
+            Intent(this, AlertRingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(AlertRingActivity.EXTRA_TITLE, getString(R.string.settings_test_critical))
+                putExtra(AlertRingActivity.EXTRA_BODY, "This is a test ring")
+                putExtra(
+                    AlertRingActivity.EXTRA_DEEP_LINK,
+                    TokenManager.getInstanceUrl(this@SettingsActivity)
+                )
+            }
+        )
     }
 
     private fun changeInstance() {
