@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GoAlert</string>
+    <string name="channel_alerts_critical">Critical Alerts</string>
+    <string name="channel_alerts_status">Status Updates</string>
+    <string name="channel_alerts_other">Other</string>
+</resources>
