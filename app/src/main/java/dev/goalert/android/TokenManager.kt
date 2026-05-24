@@ -1,6 +1,7 @@
 package dev.goalert.android
 
 import android.content.Context
+import android.util.Log
 import android.webkit.CookieManager
 import androidx.preference.PreferenceManager
 import org.json.JSONObject
@@ -11,6 +12,7 @@ import kotlin.concurrent.thread
 
 object TokenManager {
 
+    private const val TAG = "TokenManager"
     private const val PREF_INSTANCE_URL = "instance_url"
     private const val PREF_FCM_TOKEN = "fcm_token"
     private const val PREF_CONTACT_METHOD_ID = "contact_method_id"
@@ -27,19 +29,25 @@ object TokenManager {
 
     fun registerToken(context: Context, token: String) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val oldToken = prefs.getString(PREF_FCM_TOKEN, null)
-        if (oldToken == token) return
+        val existingId = prefs.getString(PREF_CONTACT_METHOD_ID, null)
+        val registeredToken = prefs.getString(PREF_FCM_TOKEN, null)
 
-        prefs.edit().putString(PREF_FCM_TOKEN, token).apply()
+        // Already registered this exact token with a known contact method — nothing to do.
+        if (existingId != null && registeredToken == token) return
 
         val instanceUrl = getInstanceUrl(context) ?: return
-        val existingId = prefs.getString(PREF_CONTACT_METHOD_ID, null)
 
         thread {
-            if (existingId != null) {
-                updateContactMethod(context, instanceUrl, existingId, token)
+            val ok = if (existingId != null) {
+                updateContactMethod(instanceUrl, existingId, token)
             } else {
                 createContactMethod(context, instanceUrl, token)
+            }
+            // Only cache the token once the server has actually accepted it. A failed
+            // attempt (e.g. fired before login, so no session cookie) leaves the token
+            // uncached so the next registerToken() call retries instead of short-circuiting.
+            if (ok) {
+                prefs.edit().putString(PREF_FCM_TOKEN, token).apply()
             }
         }
     }
@@ -48,10 +56,19 @@ object TokenManager {
         registerToken(context, token)
     }
 
-    private fun createContactMethod(context: Context, instanceUrl: String, token: String) {
+    /** Returns the authenticated user's id, or null if it can't be fetched. */
+    private fun fetchUserId(instanceUrl: String): String? {
+        val data = executeGraphQL(instanceUrl, "query { user { id } }", JSONObject()) ?: return null
+        return data.optJSONObject("user")?.optString("id")?.takeIf { it.isNotEmpty() }
+    }
+
+    /** Returns true if the contact method was created (and its id persisted). */
+    private fun createContactMethod(context: Context, instanceUrl: String, token: String): Boolean {
+        val userId = fetchUserId(instanceUrl) ?: return false
         val query = """
-            mutation(${'$'}token: String!) {
+            mutation(${'$'}userID: ID!, ${'$'}token: String!) {
               createUserContactMethod(input: {
+                userID: ${'$'}userID
                 name: "Android Device"
                 dest: {
                   type: "builtin-fcm-push"
@@ -61,15 +78,18 @@ object TokenManager {
             }
         """.trimIndent()
 
-        val variables = JSONObject().put("token", token)
-        val id = executeGraphQL(instanceUrl, query, variables, "createUserContactMethod")
-        if (id != null) {
-            PreferenceManager.getDefaultSharedPreferences(context)
-                .edit().putString(PREF_CONTACT_METHOD_ID, id).apply()
-        }
+        val variables = JSONObject().put("userID", userId).put("token", token)
+        val data = executeGraphQL(instanceUrl, query, variables) ?: return false
+        val id = data.optJSONObject("createUserContactMethod")?.optString("id")
+        if (id.isNullOrEmpty()) return false
+
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putString(PREF_CONTACT_METHOD_ID, id).apply()
+        return true
     }
 
-    private fun updateContactMethod(context: Context, instanceUrl: String, id: String, token: String) {
+    /** Returns true if the existing contact method was updated with the new token. */
+    private fun updateContactMethod(instanceUrl: String, id: String, token: String): Boolean {
         val query = """
             mutation(${'$'}id: ID!, ${'$'}token: String!) {
               updateUserContactMethod(input: {
@@ -84,43 +104,53 @@ object TokenManager {
         """.trimIndent()
 
         val variables = JSONObject().put("id", id).put("token", token)
-        executeGraphQL(instanceUrl, query, variables, "updateUserContactMethod")
+        return executeGraphQL(instanceUrl, query, variables) != null
     }
 
+    /** Runs a GraphQL mutation; returns the `data` object on success (HTTP 200, no errors), else null. */
     private fun executeGraphQL(
         instanceUrl: String,
         query: String,
-        variables: JSONObject,
-        operationPath: String
-    ): String? {
+        variables: JSONObject
+    ): JSONObject? {
+        var conn: HttpURLConnection? = null
         try {
             val url = URL("$instanceUrl/api/graphql")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-
-            val cookies = CookieManager.getInstance().getCookie(instanceUrl)
-            if (cookies != null) {
-                conn.setRequestProperty("Cookie", cookies)
+            conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 15000
+                readTimeout = 15000
+                setRequestProperty("Content-Type", "application/json")
+                CookieManager.getInstance().getCookie(instanceUrl)?.let {
+                    setRequestProperty("Cookie", it)
+                }
+                doOutput = true
             }
 
-            conn.doOutput = true
             val body = JSONObject()
                 .put("query", query)
                 .put("variables", variables)
                 .toString()
             OutputStreamWriter(conn.outputStream).use { it.write(body) }
 
-            if (conn.responseCode == 200) {
-                val response = conn.inputStream.bufferedReader().readText()
-                val json = JSONObject(response)
-                val data = json.optJSONObject("data")
-                val result = data?.optJSONObject(operationPath)
-                return result?.optString("id")
+            val code = conn.responseCode
+            if (code != 200) {
+                val err = conn.errorStream?.bufferedReader()?.readText().orEmpty()
+                Log.e(TAG, "GraphQL HTTP $code: $err")
+                return null
             }
+            val response = conn.inputStream.bufferedReader().readText()
+            val json = JSONObject(response)
+            if (json.has("errors")) {
+                Log.e(TAG, "GraphQL errors: ${json.getJSONArray("errors")}")
+                return null
+            }
+            return json.optJSONObject("data")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "GraphQL request failed", e)
+            return null
+        } finally {
+            conn?.disconnect()
         }
-        return null
     }
 }

@@ -111,6 +111,10 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 CookieManager.getInstance().flush()
+                // Retry FCM registration now that a session cookie likely exists. The first
+                // attempt in setupWebView() runs before login; TokenManager de-dupes once the
+                // contact method is created, so this is a no-op after it succeeds.
+                registerFCMToken()
             }
         }
 
