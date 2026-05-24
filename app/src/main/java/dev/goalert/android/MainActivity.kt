@@ -5,12 +5,14 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -21,9 +23,20 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
 
+    private val onBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (::webView.isInitialized && webView.canGoBack()) {
+                webView.goBack()
+            } else {
+                finish()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        onBackPressedDispatcher.addCallback(this, onBackCallback)
         NotificationHelper.createChannels(this)
 
         val instanceUrl = TokenManager.getInstanceUrl(this)
@@ -142,11 +155,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
+    override fun onResume() {
+        super.onResume()
+        if (::webView.isInitialized) webView.onResume()
+    }
+
+    override fun onPause() {
+        if (::webView.isInitialized) webView.onPause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (::webView.isInitialized) {
+            (webView.parent as? ViewGroup)?.removeView(webView)
+            webView.destroy()
         }
+        super.onDestroy()
     }
 }
