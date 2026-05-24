@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Used on API 31+ (android:dataExtractionRules). Keep the prefs holding the instance
+     URL, FCM token and contact-method id out of cloud backup and device-to-device transfer. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="dev.goalert.android_preferences.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="dev.goalert.android_preferences.xml" />
+    </device-transfer>
+</data-extraction-rules>

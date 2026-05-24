@@ -18,7 +18,15 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            // NOTE: no signingConfig is defined, so assembleRelease produces an *unsigned*
+            // APK. Add a signingConfig backed by a keystore (e.g. from gradle properties or
+            // env vars) to produce an installable/distributable release build.
         }
     }
 

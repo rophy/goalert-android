@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Used on API < 31 (android:fullBackupContent). Exclude the prefs holding the
+     instance URL, FCM token and contact-method id from cloud backup. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="dev.goalert.android_preferences.xml" />
+</full-backup-content>
