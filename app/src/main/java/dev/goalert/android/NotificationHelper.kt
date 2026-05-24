@@ -42,7 +42,11 @@ object NotificationHelper {
 
     fun showNotification(context: Context, data: Map<String, String>) {
         val type = data["type"] ?: return
-        val instanceUrl = data["instance_url"] ?: ""
+        // Prefer the URL from the push, but fall back to the configured instance so deep
+        // links still work when the server omits instance_url.
+        val instanceUrl = data["instance_url"]?.takeIf { it.isNotEmpty() }
+            ?: TokenManager.getInstanceUrl(context)
+            ?: ""
 
         val (channel, title, body) = when (type) {
             "alert" -> Triple(
@@ -63,7 +67,9 @@ object NotificationHelper {
             "verification" -> Triple(
                 CHANNEL_CRITICAL,
                 "Verification Code",
-                "Your verification code is: ${data["code"]}"
+                data["code"]?.takeIf { it.isNotEmpty() }
+                    ?.let { "Your verification code is: $it" }
+                    ?: "Verification code received"
             )
             "test" -> Triple(
                 CHANNEL_OTHER,
@@ -89,11 +95,15 @@ object NotificationHelper {
         )
 
         val notification = NotificationCompat.Builder(context, channel)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setCategory(
+                if (channel == CHANNEL_CRITICAL) NotificationCompat.CATEGORY_ALARM
+                else NotificationCompat.CATEGORY_STATUS
+            )
             .setPriority(
                 if (channel == CHANNEL_CRITICAL) NotificationCompat.PRIORITY_HIGH
                 else NotificationCompat.PRIORITY_DEFAULT
