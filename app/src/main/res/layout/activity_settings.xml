@@ -57,5 +57,12 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/settings_dnd_fix" />
+
+        <Button
+            android:id="@+id/test_critical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/settings_test_critical" />
     </LinearLayout>
 </ScrollView>

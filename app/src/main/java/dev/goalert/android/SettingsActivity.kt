@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -31,6 +32,11 @@ class SettingsActivity : AppCompatActivity() {
         dndFix = findViewById(R.id.dnd_fix)
         dndFix.setOnClickListener {
             startActivity(NotificationHelper.criticalChannelSettingsIntent(this))
+        }
+
+        findViewById<Button>(R.id.test_critical).setOnClickListener {
+            NotificationHelper.showTestCriticalNotification(this)
+            Toast.makeText(this, R.string.settings_test_critical_sent, Toast.LENGTH_SHORT).show()
         }
     }
 

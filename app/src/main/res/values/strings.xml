@@ -17,6 +17,8 @@
     <string name="settings_dnd_enabled">Enabled</string>
     <string name="settings_dnd_disabled">Not enabled</string>
     <string name="settings_dnd_fix">Fix</string>
+    <string name="settings_test_critical">Send test critical alert</string>
+    <string name="settings_test_critical_sent">Test critical alert sent</string>
 
     <!-- DND setup banner -->
     <string name="dnd_banner_title">Override Do Not Disturb</string>

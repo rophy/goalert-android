@@ -16,6 +16,8 @@ object NotificationHelper {
     // Removed in the two-channel model; deleted from existing installs in createChannels().
     private const val LEGACY_CHANNEL_OTHER = "alerts_other"
 
+    private const val TEST_NOTIFICATION_ID = 424242
+
     fun createChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
 
@@ -52,6 +54,24 @@ object NotificationHelper {
             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             putExtra(Settings.EXTRA_CHANNEL_ID, CHANNEL_CRITICAL)
         }
+    }
+
+    /**
+     * Posts a local notification on the critical channel. Lets the user verify DND override
+     * client-side: if this breaks through Do Not Disturb, the override is working. Does not
+     * exercise the FCM delivery path.
+     */
+    fun showTestCriticalNotification(context: Context) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_CRITICAL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Test Critical Alert")
+            .setContentText("If this breaks through Do Not Disturb, the override is working.")
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        context.getSystemService(NotificationManager::class.java)
+            .notify(TEST_NOTIFICATION_ID, notification)
     }
 
     fun showNotification(context: Context, data: Map<String, String>) {
