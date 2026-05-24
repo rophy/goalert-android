@@ -2,6 +2,7 @@ package dev.goalert.android
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
@@ -35,9 +36,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
-        val deepLink = intent.getStringExtra("deep_link_url")
+        val instanceUrl = TokenManager.getInstanceUrl(this) ?: return
+        val deepLink = safeDeepLink(intent.getStringExtra("deep_link_url"), instanceUrl)
         if (deepLink != null && ::webView.isInitialized) {
             webView.loadUrl(deepLink)
+        }
+    }
+
+    /**
+     * Returns [deepLink] only if it is an absolute URL whose scheme, host and port match the
+     * configured GoAlert instance. Since [MainActivity] is exported, any installed app can launch
+     * it with a `deep_link_url` extra; without this check a malicious app could load an arbitrary
+     * page — or a `javascript:` URL that runs in the authenticated GoAlert origin — into the WebView.
+     */
+    private fun safeDeepLink(deepLink: String?, instanceUrl: String): String? {
+        if (deepLink == null) return null
+        return try {
+            val link = Uri.parse(deepLink)
+            val base = Uri.parse(instanceUrl)
+            val sameOrigin = link.scheme?.equals(base.scheme, ignoreCase = true) == true &&
+                link.host?.equals(base.host, ignoreCase = true) == true &&
+                link.port == base.port
+            if (sameOrigin) deepLink else null
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -92,7 +114,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val deepLink = intent.getStringExtra("deep_link_url")
+        val deepLink = safeDeepLink(intent.getStringExtra("deep_link_url"), instanceUrl)
         webView.loadUrl(deepLink ?: instanceUrl)
 
         requestNotificationPermission()

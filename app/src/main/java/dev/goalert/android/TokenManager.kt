@@ -3,6 +3,7 @@ package dev.goalert.android
 import android.content.Context
 import android.webkit.CookieManager
 import androidx.preference.PreferenceManager
+import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
@@ -49,18 +50,19 @@ object TokenManager {
 
     private fun createContactMethod(context: Context, instanceUrl: String, token: String) {
         val query = """
-            mutation {
+            mutation(${'$'}token: String!) {
               createUserContactMethod(input: {
                 name: "Android Device"
                 dest: {
                   type: "builtin-fcm-push"
-                  args: { device_token: "$token" }
+                  args: { device_token: ${'$'}token }
                 }
               }) { id }
             }
         """.trimIndent()
 
-        val id = executeGraphQL(instanceUrl, query, "createUserContactMethod")
+        val variables = JSONObject().put("token", token)
+        val id = executeGraphQL(instanceUrl, query, variables, "createUserContactMethod")
         if (id != null) {
             PreferenceManager.getDefaultSharedPreferences(context)
                 .edit().putString(PREF_CONTACT_METHOD_ID, id).apply()
@@ -69,22 +71,28 @@ object TokenManager {
 
     private fun updateContactMethod(context: Context, instanceUrl: String, id: String, token: String) {
         val query = """
-            mutation {
+            mutation(${'$'}id: ID!, ${'$'}token: String!) {
               updateUserContactMethod(input: {
-                id: "$id"
+                id: ${'$'}id
                 name: "Android Device"
                 dest: {
                   type: "builtin-fcm-push"
-                  args: { device_token: "$token" }
+                  args: { device_token: ${'$'}token }
                 }
               }) { id }
             }
         """.trimIndent()
 
-        executeGraphQL(instanceUrl, query, "updateUserContactMethod")
+        val variables = JSONObject().put("id", id).put("token", token)
+        executeGraphQL(instanceUrl, query, variables, "updateUserContactMethod")
     }
 
-    private fun executeGraphQL(instanceUrl: String, query: String, operationPath: String): String? {
+    private fun executeGraphQL(
+        instanceUrl: String,
+        query: String,
+        variables: JSONObject,
+        operationPath: String
+    ): String? {
         try {
             val url = URL("$instanceUrl/api/graphql")
             val conn = url.openConnection() as HttpURLConnection
@@ -97,12 +105,15 @@ object TokenManager {
             }
 
             conn.doOutput = true
-            val body = """{"query":${org.json.JSONObject.quote(query)}}"""
+            val body = JSONObject()
+                .put("query", query)
+                .put("variables", variables)
+                .toString()
             OutputStreamWriter(conn.outputStream).use { it.write(body) }
 
             if (conn.responseCode == 200) {
                 val response = conn.inputStream.bufferedReader().readText()
-                val json = org.json.JSONObject(response)
+                val json = JSONObject(response)
                 val data = json.optJSONObject("data")
                 val result = data?.optJSONObject(operationPath)
                 return result?.optString("id")
