@@ -1,15 +1,20 @@
 package dev.goalert.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
@@ -22,19 +27,27 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var dndBanner: View
 
     private val onBackCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            if (::webView.isInitialized && webView.canGoBack()) {
-                webView.goBack()
-            } else {
-                finish()
-            }
+            if (webView.canGoBack()) webView.goBack() else finish()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        webView = findViewById(R.id.webview)
+        dndBanner = findViewById(R.id.dnd_banner)
+        findViewById<Button>(R.id.dnd_open_settings).setOnClickListener {
+            startActivity(NotificationHelper.criticalChannelSettingsIntent(this))
+        }
+        findViewById<Button>(R.id.dnd_later).setOnClickListener {
+            TokenManager.setDndPromptDismissed(this)
+            dndBanner.visibility = View.GONE
+        }
 
         onBackPressedDispatcher.addCallback(this, onBackCallback)
         NotificationHelper.createChannels(this)
@@ -47,11 +60,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return if (item.itemId == R.id.action_settings) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            true
+        } else {
+            super.onOptionsItemSelected(item)
+        }
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         val instanceUrl = TokenManager.getInstanceUrl(this) ?: return
         val deepLink = safeDeepLink(intent.getStringExtra("deep_link_url"), instanceUrl)
-        if (deepLink != null && ::webView.isInitialized) {
+        if (deepLink != null) {
             webView.loadUrl(deepLink)
         }
     }
@@ -106,9 +133,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWebView(instanceUrl: String) {
-        webView = WebView(this)
-        setContentView(webView)
-
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
             setAcceptThirdPartyCookies(webView, true)
@@ -149,27 +173,51 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        updateDndBanner()
+    }
+
     private fun registerFCMToken() {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
             TokenManager.registerToken(this, token)
         }
     }
 
+    /** Shows the DND setup banner only when notifications are allowed, override is off, and the
+     *  user hasn't dismissed it. */
+    private fun updateDndBanner() {
+        val show = TokenManager.getInstanceUrl(this) != null &&
+            notificationsAllowed() &&
+            !NotificationHelper.criticalDndBypassEnabled(this) &&
+            !TokenManager.isDndPromptDismissed(this)
+        dndBanner.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    private fun notificationsAllowed(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
     override fun onResume() {
         super.onResume()
-        if (::webView.isInitialized) webView.onResume()
+        webView.onResume()
+        updateDndBanner()
     }
 
     override fun onPause() {
-        if (::webView.isInitialized) webView.onPause()
+        webView.onPause()
         super.onPause()
     }
 
     override fun onDestroy() {
-        if (::webView.isInitialized) {
-            (webView.parent as? ViewGroup)?.removeView(webView)
-            webView.destroy()
-        }
+        (webView.parent as? ViewGroup)?.removeView(webView)
+        webView.destroy()
         super.onDestroy()
     }
 }

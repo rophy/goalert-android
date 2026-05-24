@@ -1,7 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">GoAlert</string>
+
+    <!-- Notification channels -->
     <string name="channel_alerts_critical">Critical Alerts</string>
     <string name="channel_alerts_status">Status Updates</string>
-    <string name="channel_alerts_other">Other</string>
+
+    <!-- Menu -->
+    <string name="action_settings">Settings</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_instance_label">GoAlert instance</string>
+    <string name="settings_change_instance">Change instance URL</string>
+    <string name="settings_dnd_title">Do Not Disturb override</string>
+    <string name="settings_dnd_enabled">Enabled</string>
+    <string name="settings_dnd_disabled">Not enabled</string>
+    <string name="settings_dnd_fix">Fix</string>
+
+    <!-- DND setup banner -->
+    <string name="dnd_banner_title">Override Do Not Disturb</string>
+    <string name="dnd_banner_body">To receive on-call alerts when Do Not Disturb is active, enable DND override for this app.</string>
+    <string name="dnd_open_settings">Open Settings</string>
+    <string name="dnd_later">Later</string>
 </resources>

@@ -16,6 +16,7 @@ object TokenManager {
     private const val PREF_INSTANCE_URL = "instance_url"
     private const val PREF_FCM_TOKEN = "fcm_token"
     private const val PREF_CONTACT_METHOD_ID = "contact_method_id"
+    private const val PREF_DND_PROMPT_DISMISSED = "dnd_prompt_dismissed"
 
     fun getInstanceUrl(context: Context): String? {
         return PreferenceManager.getDefaultSharedPreferences(context)
@@ -25,6 +26,25 @@ object TokenManager {
     fun setInstanceUrl(context: Context, url: String) {
         PreferenceManager.getDefaultSharedPreferences(context)
             .edit().putString(PREF_INSTANCE_URL, url).apply()
+    }
+
+    /** Clears the instance URL and its per-instance registration so the user can reconnect. */
+    fun clearInstance(context: Context) {
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .remove(PREF_INSTANCE_URL)
+            .remove(PREF_CONTACT_METHOD_ID)
+            .remove(PREF_FCM_TOKEN)
+            .apply()
+    }
+
+    fun isDndPromptDismissed(context: Context): Boolean {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+            .getBoolean(PREF_DND_PROMPT_DISMISSED, false)
+    }
+
+    fun setDndPromptDismissed(context: Context) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(PREF_DND_PROMPT_DISMISSED, true).apply()
     }
 
     fun registerToken(context: Context, token: String) {

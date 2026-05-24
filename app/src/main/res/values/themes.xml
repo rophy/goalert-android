@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.GoAlert" parent="Theme.AppCompat.DayNight.NoActionBar" />
+    <!-- Action-bar theme so the WebView screen has an overflow menu (Settings) and the
+         settings screen has an up button. -->
+    <style name="Theme.GoAlert" parent="Theme.AppCompat.DayNight" />
 </resources>

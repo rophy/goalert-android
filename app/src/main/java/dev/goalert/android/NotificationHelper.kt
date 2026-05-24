@@ -5,17 +5,21 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
 
     const val CHANNEL_CRITICAL = "alerts_critical"
     const val CHANNEL_STATUS = "alerts_status"
-    const val CHANNEL_OTHER = "alerts_other"
+
+    // Removed in the two-channel model; deleted from existing installs in createChannels().
+    private const val LEGACY_CHANNEL_OTHER = "alerts_other"
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
 
+        // Actionable: alerts and verification codes. Requests DND bypass (user must grant it).
         val critical = NotificationChannel(
             CHANNEL_CRITICAL,
             context.getString(R.string.channel_alerts_critical),
@@ -25,19 +29,29 @@ object NotificationHelper {
             setBypassDnd(true)
         }
 
+        // Informational: alert status changes and test messages. Never bypasses DND.
         val status = NotificationChannel(
             CHANNEL_STATUS,
             context.getString(R.string.channel_alerts_status),
             NotificationManager.IMPORTANCE_DEFAULT
         )
 
-        val other = NotificationChannel(
-            CHANNEL_OTHER,
-            context.getString(R.string.channel_alerts_other),
-            NotificationManager.IMPORTANCE_LOW
-        )
+        manager.createNotificationChannels(listOf(critical, status))
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_OTHER)
+    }
 
-        manager.createNotificationChannels(listOf(critical, status, other))
+    /** True if the user has granted DND override for the critical channel. */
+    fun criticalDndBypassEnabled(context: Context): Boolean {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        return manager.getNotificationChannel(CHANNEL_CRITICAL)?.canBypassDnd() == true
+    }
+
+    /** Intent that opens the system settings page for the critical channel. */
+    fun criticalChannelSettingsIntent(context: Context): Intent {
+        return Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            putExtra(Settings.EXTRA_CHANNEL_ID, CHANNEL_CRITICAL)
+        }
     }
 
     fun showNotification(context: Context, data: Map<String, String>) {
@@ -72,7 +86,7 @@ object NotificationHelper {
                     ?: "Verification code received"
             )
             "test" -> Triple(
-                CHANNEL_OTHER,
+                CHANNEL_STATUS,
                 "Test Notification",
                 "GoAlert push notifications are working"
             )
