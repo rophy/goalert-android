@@ -1,48 +1,34 @@
 # TODO / Known Issues
 
-Outstanding findings from the code review. The High-severity security issues and the
-FCM registration bug have already been fixed (see git history). The items below remain.
+Most review findings have been fixed (see git history). Remaining items are below.
 
-## Medium
+## Fixed
 
-- **Deep link breaks when a push omits `instance_url`**
-  `NotificationHelper.kt` (`showNotification`, `instanceUrl` defaults to `""`) → builds an
-  invalid `/alerts/<id>` URL. `FCMService` has a `Context`, so fall back to
-  `TokenManager.getInstanceUrl(this)` instead of trusting the payload to always carry it.
+- **Deep link fallback** — `NotificationHelper` now falls back to the stored instance URL
+  when a push omits `instance_url`.
+- **WebView lifecycle** — WebView is destroyed in `onDestroy`, `onPause`/`onResume` are
+  forwarded, and `android:configChanges` avoids reload on rotation.
+- **Back navigation** — migrated from deprecated `onBackPressed()` to `OnBackPressedDispatcher`.
+- **Notification icon** — added a monochrome `ic_notification` vector (no more white blob).
+- **Release hardening** — R8 minify + `shrinkResources` enabled, `proguard-rules.pro` added.
+- **Critical alerts** — set `CATEGORY_ALARM` on the critical channel.
+- **Backup of sensitive prefs** — `backup_rules.xml` / `data_extraction_rules.xml` exclude
+  the shared prefs (instance URL, FCM token, contact-method id) from backup/transfer.
+- **Cleartext** — README documents the HTTPS-only requirement.
+- **Verification notification** — no longer shows "code is: null" when the code is absent.
 
-- **WebView lifecycle**
-  `MainActivity.kt` (`setupWebView`) — the WebView is never destroyed (leak), `onPause`/
-  `onResume` aren't forwarded, and with no `android:configChanges` it's recreated on rotation
-  (reloads the page, loses scroll/form state). Forward lifecycle and/or handle config changes.
+## Remaining
 
-## Low
+- **Release signing config** (`app/build.gradle.kts`) — still no `signingConfig`, so
+  `assembleRelease` produces an *unsigned* APK. Add one backed by a keystore (gradle
+  properties / env vars) for distributable builds. Needs a keystore, so left undone.
 
-- **`onBackPressed()` is deprecated** on `targetSdk 34` (`MainActivity.kt`). Migrate to
-  `OnBackPressedDispatcher` / `OnBackPressedCallback`.
-
-- **Notification small icon** uses `android.R.drawable.ic_dialog_alert`
-  (`NotificationHelper.kt`) — a full-color system drawable renders as a white blob in the
-  status bar. Ship a proper monochrome silhouette icon.
-
-- **Release build hardening** (`app/build.gradle.kts`) — `isMinifyEnabled = false`, no R8/
-  shrinking, no signing config. Enable R8 and add a signing config for real release builds.
-
-- **`setBypassDnd(true)`** (`NotificationHelper.kt`) is ignored unless the app is granted
-  notification-policy access. For true critical alerts consider `CATEGORY_ALARM` and/or a
-  full-screen intent.
-
-- **`allowBackup="true"`** (`AndroidManifest.xml`) backs up the instance URL + FCM token +
-  contact-method id. Consider `fullBackupContent` rules or disabling backup for these.
-
-- **Cleartext blocked globally** (`network_security_config.xml`) — self-hosted `http://`
-  instances will fail silently, and `http://`-prefixed input in the URL dialog isn't upgraded
-  (`MainActivity.kt`). Document this, or handle http hosts explicitly.
-
-- **Verification notification** shows `"...is: null"` if the `code` field is missing
-  (`NotificationHelper.kt`).
+- **Full-screen intent for critical alerts** (`NotificationHelper`) — `CATEGORY_ALARM` is set,
+  but a true heads-up/full-screen alert (to wake the screen) needs the restricted
+  `USE_FULL_SCREEN_INTENT` permission (special approval on Android 14+). Evaluate before adding.
 
 ## Notes / to verify
 
-- The `builtin-fcm-push` dest type and the push data-payload keys (`type`, `service_name`,
+- The `builtin-fcm-push` dest type and push data-payload keys (`type`, `service_name`,
   `summary`, `alert_id`, `instance_url`, `code`, `count`) are a contract with the custom
   server-side GoAlert FCM provider. Keep them in sync with the server.

@@ -24,6 +24,10 @@ A lightweight Android app that wraps [GoAlert](https://github.com/target/goalert
 
 On first launch, enter your GoAlert instance URL, log in, and grant notification permissions. The app registers your device for push notifications automatically.
 
+> **Note:** the instance must be served over **HTTPS**. Cleartext (`http://`) traffic is
+> blocked by the app's network security config, so an `http://` URL will fail to connect.
+> If you omit the scheme, `https://` is assumed.
+
 ## GoAlert Server Configuration
 
 In GoAlert Admin > Config > FCM:
