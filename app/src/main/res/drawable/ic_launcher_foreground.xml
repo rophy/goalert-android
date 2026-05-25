@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Centers the GoAlert logo within the adaptive-icon safe zone (108dp canvas). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="80dp"
+        android:height="80dp"
+        android:gravity="center"
+        android:drawable="@drawable/goalert_logo" />
+</layer-list>
