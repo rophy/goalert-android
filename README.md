@@ -5,10 +5,18 @@ A lightweight Android app that wraps [GoAlert](https://github.com/target/goalert
 ## Features
 
 - Full GoAlert web UI in a WebView (uses existing session/cookie auth)
+- Full-screen **ringing** critical alerts that break through Do Not Disturb and the lock screen, with an Acknowledge/Open action
 - High-priority FCM push notifications for alerts (bypasses Doze mode)
-- Notification channels: critical alerts, status updates, other
+- Two notification channels: critical alerts (DND-bypass capable) and status updates
+- In-app controls: ring on/off, plus status + shortcuts for the DND override, full-screen, and display-over-other-apps permissions
 - Deep-links from notifications directly to the alert page
 - Automatic FCM token registration and refresh
+
+## Screenshots
+
+| Alerts (WebView) | Settings | Critical alert ring |
+|---|---|---|
+| ![Alerts](docs/screenshots/01-webview.png) | ![Settings](docs/screenshots/02-settings.png) | ![Critical alert ring](docs/screenshots/03-ring.png) |
 
 ## Requirements
 
