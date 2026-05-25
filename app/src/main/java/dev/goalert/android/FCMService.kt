@@ -9,14 +9,25 @@ class FCMService : FirebaseMessagingService() {
         val data = message.data
         if (data.isEmpty()) return
         when (data["type"]) {
-            // Actionable alerts ring with a full-screen, lock-screen UI unless the user opted out.
-            "alert", "alert_bundle" ->
-                if (TokenManager.isRingEnabled(this)) {
-                    NotificationHelper.showRingingAlert(this, data)
-                } else {
-                    NotificationHelper.showNotification(this, data)
-                }
+            // Actionable alerts ring unless the user opted out.
+            "alert", "alert_bundle" -> ringOrNotify(data)
             else -> NotificationHelper.showNotification(this, data)
+        }
+    }
+
+    private fun ringOrNotify(data: Map<String, String>) {
+        if (!TokenManager.isRingEnabled(this)) {
+            NotificationHelper.showNotification(this, data)
+            return
+        }
+        // With overlay permission we can launch the ring immediately, even while the screen is
+        // on/unlocked. Otherwise fall back to a full-screen-intent notification (rings when
+        // locked, heads-up when unlocked).
+        val ringIntent = NotificationHelper.ringActivityIntent(this, data)
+        if (ringIntent != null && NotificationHelper.canDrawOverlays(this)) {
+            startActivity(ringIntent)
+        } else {
+            NotificationHelper.showRingingAlert(this, data)
         }
     }
 

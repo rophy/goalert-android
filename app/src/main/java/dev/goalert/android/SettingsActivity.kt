@@ -14,6 +14,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var dndHint: TextView
     private lateinit var fullScreenStatus: TextView
     private lateinit var fullScreenHint: TextView
+    private lateinit var overlayStatus: TextView
+    private lateinit var overlayHint: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +49,12 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(NotificationHelper.fullScreenIntentSettingsIntent(this))
         }
 
+        overlayStatus = findViewById(R.id.overlay_status)
+        overlayHint = findViewById(R.id.overlay_hint)
+        findViewById<Button>(R.id.overlay_fix).setOnClickListener {
+            startActivity(NotificationHelper.overlaySettingsIntent(this))
+        }
+
         findViewById<Button>(R.id.test_critical).setOnClickListener { startTestRing() }
     }
 
@@ -61,6 +69,11 @@ class SettingsActivity : AppCompatActivity() {
             fullScreenStatus, fullScreenHint,
             NotificationHelper.canUseFullScreenIntent(this),
             R.string.settings_fullscreen_hint_on, R.string.settings_fullscreen_hint_off
+        )
+        setStatus(
+            overlayStatus, overlayHint,
+            NotificationHelper.canDrawOverlays(this),
+            R.string.settings_overlay_hint_on, R.string.settings_overlay_hint_off
         )
     }
 

@@ -28,6 +28,10 @@
     <string name="settings_fullscreen_hint_off">Tap Open settings, then allow full-screen notifications so alerts ring over the lock screen.</string>
     <string name="settings_fullscreen_hint_on">Alerts can ring over the lock screen. Tap Open settings to turn this off.</string>
 
+    <string name="settings_overlay_title">Display over other apps</string>
+    <string name="settings_overlay_hint_off">Tap Open settings, then allow GoAlert to appear on top so alerts ring immediately even while you\'re using another app.</string>
+    <string name="settings_overlay_hint_on">Alerts can ring on top of other apps. Tap Open settings to turn this off.</string>
+
     <string name="settings_test_critical">Send test critical alert</string>
 
     <!-- Ringing alert -->

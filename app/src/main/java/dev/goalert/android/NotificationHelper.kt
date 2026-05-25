@@ -75,12 +75,24 @@ object NotificationHelper {
         )
     }
 
+    /** True if the app may draw over other apps (lets us ring immediately even while unlocked). */
+    fun canDrawOverlays(context: Context): Boolean = Settings.canDrawOverlays(context)
+
+    /** Settings page where the user grants the "display over other apps" permission. */
+    fun overlaySettingsIntent(context: Context): Intent {
+        return Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${context.packageName}")
+        )
+    }
+
     /**
-     * Posts a high-priority full-screen-intent notification that launches [AlertRingActivity],
-     * producing a ringing, lock-screen alert for actionable alert types.
+     * Builds the intent that launches [AlertRingActivity] for an actionable alert, or null if the
+     * type isn't ringable. Used both to start the activity directly (when we can draw overlays)
+     * and as the full-screen intent target.
      */
-    fun showRingingAlert(context: Context, data: Map<String, String>) {
-        val type = data["type"] ?: return
+    fun ringActivityIntent(context: Context, data: Map<String, String>): Intent? {
+        val type = data["type"] ?: return null
         val instanceUrl = data["instance_url"]?.takeIf { it.isNotEmpty() }
             ?: TokenManager.getInstanceUrl(context)
             ?: ""
@@ -89,16 +101,24 @@ object NotificationHelper {
             "alert" -> (data["service_name"] ?: "Alert") to (data["summary"] ?: "New alert")
             "alert_bundle" -> (data["service_name"] ?: "Alerts") to
                 "${data["count"] ?: "Multiple"} unacknowledged alerts"
-            else -> return
+            else -> return null
         }
         val deepLink = if (type == "alert") "$instanceUrl/alerts/${data["alert_id"]}" else instanceUrl
 
-        val ringIntent = Intent(context, AlertRingActivity::class.java).apply {
+        return Intent(context, AlertRingActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(AlertRingActivity.EXTRA_TITLE, title)
             putExtra(AlertRingActivity.EXTRA_BODY, body)
             putExtra(AlertRingActivity.EXTRA_DEEP_LINK, deepLink)
         }
+    }
+
+    /**
+     * Posts a high-priority full-screen-intent notification that launches [AlertRingActivity],
+     * producing a ringing, lock-screen alert for actionable alert types.
+     */
+    fun showRingingAlert(context: Context, data: Map<String, String>) {
+        val ringIntent = ringActivityIntent(context, data) ?: return
         val pendingIntent = PendingIntent.getActivity(
             context, RING_NOTIFICATION_ID, ringIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -106,8 +126,8 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CRITICAL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(body)
+            .setContentTitle(ringIntent.getStringExtra(AlertRingActivity.EXTRA_TITLE))
+            .setContentText(ringIntent.getStringExtra(AlertRingActivity.EXTRA_BODY))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

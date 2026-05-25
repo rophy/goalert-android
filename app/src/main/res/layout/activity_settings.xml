@@ -126,6 +126,38 @@
             android:layout_marginTop="8dp"
             android:text="@string/settings_open_settings" />
 
+        <View style="@style/SettingsDivider" />
+
+        <!-- Display over other apps -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_overlay_title"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/overlay_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/overlay_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/overlay_fix"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/settings_open_settings" />
+
         <Button
             android:id="@+id/test_critical"
             android:layout_width="wrap_content"
